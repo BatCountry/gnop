@@ -3,7 +3,7 @@ import { digit } from "./digits";
 
 
 export class Playfield {
-    private gameState: GameState = new GameState();
+    public gameState: GameState = new GameState();
 
 
     private midpoint_line(ctx: CanvasRenderingContext2D) {

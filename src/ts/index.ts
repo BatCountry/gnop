@@ -1,4 +1,5 @@
 import { Playfield } from "./playfield";
+import { doWheel } from "./mouse";
 
 const MAXFPS: number = 3;
 
@@ -65,6 +66,8 @@ export default class Gnop {
                 window.onresize = () => {
                     this.doGeometry(canvas, ctx);
                 }
+
+                canvas.addEventListener('wheel',  (ev: WheelEvent) => doWheel(this.game.gameState, ev) );
 
                 let memoized = this.game.frameCallback(ctx);
                 // start the frame timer
