@@ -2,6 +2,7 @@ import { Coord } from "./coord";
 
 export const PADDLE_HEIGHT = 5;
 export const PADDLE_H_OFFSET = 5;
+export const PADDLE_SENSITIVITY = 3;
 
 
 export class GameState {

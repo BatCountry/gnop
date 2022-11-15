@@ -1,6 +1,20 @@
-import { GameState } from "./gamestate";
-import { clamp } from "./math";
+export class MouseWheel {
+    private accumulated: number = 0;
 
-export function doWheel(gameState: GameState, ev: WheelEvent) {
-    gameState.rightPos.y = clamp(0, ev.deltaY + gameState.rightPos.y, 100);
+    constructor() {
+        this.accumulated = 0;
+    }
+
+    public clear(): number {
+        let accumulated = this.accumulated;
+        this.accumulated = 0;
+        return accumulated;
+    }
+
+
+    public handle(ev: WheelEvent) {
+        let qty = ev.deltaY / Math.abs(ev.deltaY);
+        this.accumulated += ev.deltaY / Math.abs(ev.deltaY);
+        console.log(this.accumulated);
+    }
 }

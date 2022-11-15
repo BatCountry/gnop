@@ -1,7 +1,6 @@
 import { Playfield } from "./playfield";
-import { doWheel } from "./mouse";
 
-const MAXFPS: number = 3;
+const MAXFPS: number = 60;
 
 
 function doAnimationFrame(callback: FrameRequestCallback) {
@@ -36,7 +35,7 @@ function waitForPlayfield(): Promise<HTMLCanvasElement> {
 
 
 export default class Gnop {
-    private game = new Playfield();
+    private game: Playfield = {} as Playfield;
 
     public doGeometry(canvas: HTMLCanvasElement, ctx?: CanvasRenderingContext2D | null): CanvasRenderingContext2D {
         // grab the rendering context if we don't have it
@@ -55,23 +54,24 @@ export default class Gnop {
         return ctx;
     }
 
-    public init(): void {
+    public run() {
+        // start the frame timer
+        doAnimationFrame((elapsed) => this.game.frame(elapsed));
+    }
+
+    public constructor() {
         waitForPlayfield().then(
             (canvas: HTMLCanvasElement) => {
                 // fix the canvas geometry to match the window client rect
                 let ctx = this.doGeometry(canvas);
+
+                this.game = new Playfield(canvas, ctx);
 
                 // register an onresize event for fixing the client rect if the window's resized
                 this.doGeometry.bind(this);
                 window.onresize = () => {
                     this.doGeometry(canvas, ctx);
                 }
-
-                canvas.addEventListener('wheel',  (ev: WheelEvent) => doWheel(this.game.gameState, ev) );
-
-                let memoized = this.game.frameCallback(ctx);
-                // start the frame timer
-                doAnimationFrame(memoized);
             }
         );
 	}
@@ -80,6 +80,5 @@ export default class Gnop {
 
 window.onload = () => {
 	let gnop = new Gnop();
-
-	gnop.init();
+    gnop.run();
 }
