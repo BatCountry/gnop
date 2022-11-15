@@ -35,6 +35,10 @@ breakout rules, two player, no edge of screen scoring
 * min ball movement rate is 33 units per second
 * max ball movement rate is 200 units per second (166? tweak)
 * max paddle movement rate is inf
+* ball start vector is same as previous score
+* ball start position is center line, v position as previous score
+* ball position at start of match is randomized v
+* ball vector at start of match is 45 degrees random up/down (doesn't appear randomized in arcade, looks like it keeps demo vector during the blank period at start of match)
 * ball is rect
 * paddle is rect
 * w(paddle) == w(ball) == n/100 of screen, tweak
