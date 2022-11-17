@@ -13,8 +13,6 @@ export class MouseWheel {
 
 
     public handle(ev: WheelEvent) {
-        let qty = ev.deltaY / Math.abs(ev.deltaY);
         this.accumulated += ev.deltaY / Math.abs(ev.deltaY);
-        console.log(this.accumulated);
     }
 }

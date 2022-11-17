@@ -1,6 +1,5 @@
 import { Playfield } from "./playfield";
-
-const MAXFPS: number = 60;
+import { MAXFPS } from "./constants";
 
 
 function doAnimationFrame(callback: FrameRequestCallback) {
@@ -9,7 +8,6 @@ function doAnimationFrame(callback: FrameRequestCallback) {
         doAnimationFrame(callback);
     }, 1000 / MAXFPS);
 }
-
 
 function waitForPlayfield(): Promise<HTMLCanvasElement> {
     const pf = '#playfield'
@@ -33,7 +31,6 @@ function waitForPlayfield(): Promise<HTMLCanvasElement> {
     });
 }
 
-
 export default class Gnop {
     private game: Playfield = {} as Playfield;
 
@@ -44,10 +41,14 @@ export default class Gnop {
         // set viewport dimensions
         canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
-        ctx.scale(canvas.width / 100, canvas.height / 100);
+
+        let bigDim = Math.max(canvas.width, canvas.height);
+        this.game.yLim = canvas.height / bigDim;
+
+        ctx.scale(bigDim / 100, bigDim / 100);
 
         // set some global canvas rendering style values, could probably have done this in CSS
-        ctx.lineWidth = .2;
+        ctx.lineWidth = 0;
         ctx.strokeStyle = 'white';
         ctx.fillStyle = 'white';
 
@@ -62,21 +63,22 @@ export default class Gnop {
     public constructor() {
         waitForPlayfield().then(
             (canvas: HTMLCanvasElement) => {
+                this.game = new Playfield();
+
                 // fix the canvas geometry to match the window client rect
                 let ctx = this.doGeometry(canvas);
-
-                this.game = new Playfield(canvas, ctx);
 
                 // register an onresize event for fixing the client rect if the window's resized
                 this.doGeometry.bind(this);
                 window.onresize = () => {
                     this.doGeometry(canvas, ctx);
                 }
+
+                this.game.attachCanvas(canvas, ctx);
             }
         );
 	}
 }
-
 
 window.onload = () => {
 	let gnop = new Gnop();
