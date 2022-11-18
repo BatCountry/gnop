@@ -7,10 +7,21 @@ export class Coord {
         this.y = y;
     }
 
+    public cross_product(other: Coord): number {
+        return this.x * other.y - this.y * other.x;
+    }
+
     public multiply(other: Coord): Coord {
         let outCoord = new Coord(this.x, this.y);
         outCoord.x *= other.x;
         outCoord.y *= other.y;
+        return outCoord;
+    }
+
+    public divide(other: Coord): Coord {
+        let outCoord = new Coord(this.x, this.y);
+        outCoord.x /= other.x || 1;
+        outCoord.y /= other.y || 1;
         return outCoord;
     }
 
@@ -25,6 +36,13 @@ export class Coord {
         let outCoord = new Coord(this.x, this.y);
         outCoord.x += other.x;
         outCoord.y += other.y;
+        return outCoord;
+    }
+
+    public subtract(other: Coord) {
+        let outCoord = new Coord(this.x, this.y);
+        outCoord.x -= other.x;
+        outCoord.y -= other.y;
         return outCoord;
     }
 

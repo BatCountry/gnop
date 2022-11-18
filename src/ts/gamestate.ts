@@ -8,7 +8,9 @@ export class GameState {
     ballPos: Coord = new Coord(1, 0);
     ballVector: Coord = new Coord(-1, 1);
 
+    leftVector: Coord = new Coord(0, 0);
     leftPos: Coord = new Coord(0, 0);
+    rightVector: Coord = new Coord(0, 0);
     rightPos: Coord = new Coord(0, 0);
 
     constructor() {
