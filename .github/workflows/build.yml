@@ -29,7 +29,7 @@ jobs:
         run: yarn --frozen-lockfile
 
       - name: Build 🔧
-        run: yarn prod
+        run: yarn build
 
       - name: Upload artifact 📦
         uses: actions/upload-pages-artifact@v1
