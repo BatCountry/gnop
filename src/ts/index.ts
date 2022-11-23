@@ -1,6 +1,7 @@
 import { Playfield } from "./playfield";
 import { MAXFPS } from "./constants";
-
+import { Coord } from "./coord";
+import { findIntersection } from "./math";
 
 function doAnimationFrame(callback: FrameRequestCallback) {
     requestAnimationFrame(callback);

@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "configtest": "webpack configtest",
-    "start": "webpack-dev-server --mode=development --hot",
+    "start": "webpack-dev-server -d source-map",
     "build": "webpack build --stats verbose"
   },
   "devDependencies": {
@@ -19,6 +19,7 @@
     "yarn": "^1.17.3",
     "webpack": "^5.74.0",
     "webpack-cli": "^4.10.0",
-    "webpack-dev-server": "^4.11.1"
+    "webpack-dev-server": "^4.11.1",
+    "@vscode/debugadapter": "^1.58.0"
   }
 }

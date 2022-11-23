@@ -3,7 +3,7 @@ import { GameState } from "./gamestate";
 import { MouseWheel } from "./mouse";
 
 import { digit } from "./digits";
-import { clamp } from "./math";
+import { clamp, findIntersection, nearZero } from "./math";
 import { Coord } from "./coord";
 
 
@@ -16,7 +16,8 @@ export class Playfield {
     yLim: number = 1;
 
     public attachCanvas(canvas: HTMLCanvasElement, context: CanvasRenderingContext2D) {
-        canvas.addEventListener('wheel', (ev) => this.mouseHandler.handle(ev) );
+        canvas.addEventListener('wheel', (ev) => this.mouseHandler.wheelHandler(ev) );
+        canvas.addEventListener('click', this.mouseHandler.createClickHandler(this.gameState) );
         this.context = context;
     }
 
@@ -40,141 +41,129 @@ export class Playfield {
     }
 
     private stateChange(timeDelta: DOMHighResTimeStamp) {
-        let paddleDelta = new Coord(0, this.mouseHandler.clear() * PADDLE_SENSITIVITY);
+        this.gameState.rightVector = new Coord(0, this.mouseHandler.clear() * PADDLE_SENSITIVITY);
 
-        this.ball(timeDelta, paddleDelta);
-        this.paddles(paddleDelta);
+        this.doSimulationStep(timeDelta);
+        this.drawBall();
+        this.drawPaddles();
     }
 
-    private nearZero(value: number): boolean {
-        // round to nearest thousandth, then compare to zero
-        return (Math.round(value * 1000) / 1000) == 0;
-    }
-
-    private findIntersection(ballVector: Coord, ballStart: Coord, colliderVector: Coord, colliderStart: Coord): Coord | null {
-        // pad width
-        let addX = 0;
-        let addY = 0;
-
-        if(ballVector.x > 0) addX = 1;
-        if(ballVector.y > 0) addY = 1;
-
-        // add ball size padding if we're moving down and/or right
-        ballStart = ballStart.add(new Coord(addX, addY));
-
-        var startDifference = ballStart.subtract(colliderStart);
-
-        var vectorsCross = ballVector.cross_product(colliderVector);
-        var crossBallVector = startDifference.cross_product(ballVector);
-
-        // not checking for colinearity, as we're clamping ballVector.x between 0.01 and 3
-        if (!this.nearZero(vectorsCross)) {
-            var t = startDifference.cross_product(ballVector)/vectorsCross;
-            var u = crossBallVector/vectorsCross;
-
-            // 4. If r x s != 0 and 0 <= t <= 1 and 0 <= u <= 1
-            // the two line segments meet at the point p + t r = q + u s.
-            if (!this.nearZero(vectorsCross) && (0 <= t && t <= 1) && (0 <= u && u <= 1))
-            {
-                // We can calculate the intersection point using either t or u.
-                return ballStart.add(ballVector.multiply(new Coord(t, t)));
-            }
-        }
-
-        return null;
-    }
-
-    private paddles(paddleDelta: Coord) {
-        // TODO: lerp leftpos.y with ballpos.y with a clamped movement speed
-        this.gameState.leftPos.y = clamp(0, this.gameState.ballPos.y-PADDLE_HEIGHT/1.75, 100 - PADDLE_HEIGHT/this.yLim);
-        this.gameState.rightPos.y = clamp(0, paddleDelta.y + this.gameState.rightPos.y, 100 - PADDLE_HEIGHT/this.yLim);
-
-        let [lpx, lpy] = this.gameState.leftPos;
-        let [rpx, rpy] = this.gameState.rightPos;
-        let [w, h] = [1, PADDLE_HEIGHT];
-
-        // TODO: make this sane - right now we're just drawing a line segment where the paddle started, not where it will be
-        this.gameState.leftVector = new Coord(0, PADDLE_HEIGHT);
-        this.gameState.rightVector = new Coord(0, PADDLE_HEIGHT);
-
-        this.context.fillRect(lpx, lpy*this.yLim, w, h);
-        this.context.fillRect(rpx, rpy*this.yLim, w, h);
-    }
-
-    private topMargin(): [Coord, Coord] {
-        return [new Coord(100, 0), new Coord(0, 0)];
-    }
-
-    private bottomMargin(): [Coord, Coord] {
-        return [new Coord(100, 0), new Coord(0, 100)];
-    }
-
-    private leftMargin(): [Coord, Coord] {
-        return [new Coord(0, 100), new Coord(0, 0)];
-    }
-
-    private rightMargin(): [Coord, Coord] {
-        return [new Coord(0, 100), new Coord(100, 0)];
-    }
-
-    private bounce(target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
-        timeDelta *= target.subtract(intersection).magnitude();
+    private bounce(origin: Coord, target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
+        timeDelta *= intersection.subtract(target).magnitude()/target.subtract(origin).magnitude();
         return timeDelta;
     }
 
-    private bounceY(target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
+    private bounceY(origin: Coord, target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
         // bounce
         this.gameState.ballVector.y *= -1;
-        return this.bounce(target, intersection, timeDelta);
+        return this.bounce(origin, target, intersection, timeDelta);
     }
 
-    private bounceX(target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
+    private bounceX(origin: Coord, target: Coord, intersection: Coord, timeDelta: DOMHighResTimeStamp): DOMHighResTimeStamp {
         // bounce
         this.gameState.ballVector.x *= -1;
-        return this.bounce(target, intersection, timeDelta);
+        return this.bounce(origin, target, intersection, timeDelta);
     }
 
-    private doBallCollisions(timeDelta: DOMHighResTimeStamp, paddleDelta: Coord): Coord {
+    private simStepHelper(timeDelta: DOMHighResTimeStamp): Coord {
         let target = this.gameState.ballPos.add(
             this.gameState.ballVector.scale(
                 BASE_BALL_SPEED/1000*timeDelta));
+        // TODO: lerp leftpos.y with ballpos.y with a clamped movement speed
+        // TODO: paddle target vector needs to be scaled just like the ballvector
+        let leftTarget = new Coord(
+            this.gameState.leftPos.x,
+            clamp(
+                0,
+                this.gameState.ballPos.y-PADDLE_HEIGHT/1.75,
+                100 - PADDLE_HEIGHT/this.yLim));
+        let rightTarget = new Coord(
+            this.gameState.rightPos.x,
+            clamp(
+                0,
+                this.gameState.rightVector.y + this.gameState.rightPos.y,
+                100 - PADDLE_HEIGHT/this.yLim));
 
         let bv = this.gameState.ballVector;
         let bp = this.gameState.ballPos;
 
-        let ti = this.findIntersection(bv, bp, ...this.topMargin());
-        let bi = this.findIntersection(bv, bp, ...this.topMargin());
-
-        if(ti || bi) {
-            timeDelta = this.bounceY(
-                target,
-                // this is totally unnecessary safeguard, but typescript is not smart
-                ti != null ? ti : (bi || {} as Coord),
-                timeDelta);
-            if(!this.nearZero(timeDelta)) {
-                return this.doBallCollisions(timeDelta, paddleDelta);
+        // will collide with top margin this frame
+        if(bv.y < 0 && bp.y < -bv.y) {
+            let bi = findIntersection(bv, bp, ...this.topMargin());
+            if(bi) {
+                timeDelta = this.bounceY(
+                    this.gameState.ballPos,
+                    target, bi, timeDelta);
+                this.gameState.ballPos = bi;
+                if(!nearZero(timeDelta)) {
+                    return this.simStepHelper(timeDelta);
+                }
             }
         }
 
-        let lpi = this.findIntersection(bv, bp, this.gameState.leftVector, this.gameState.leftPos);
-        let rpi = this.findIntersection(bv, bp, paddleDelta, this.gameState.leftPos);
+        // will collide with bottom margin this frame
+        if(bv.y > 0 && bp.y > 99-bv.y) {
+            let bi = findIntersection(bv, bp, ...this.bottomMargin());
+            if(bi) {
+                timeDelta = this.bounceY(
+                    this.gameState.ballPos,
+                    target, bi, timeDelta);
+                this.gameState.ballPos = bi;
+                if(!nearZero(timeDelta)) {
+                    return this.simStepHelper(timeDelta);
+                }
+            }
+        }
+
+        // examine whether we collide with a paddle this frame
+        // TODO: Change this so it doesn't take the vector but the target position
+        // TODO: add a check to find out if the time position of the intersection allows the paddle to intersect
+        // something like find when the two possible vectors intersect, then translate the paddle to where it will be at that time
+        // then create a line segment for the paddle size starting at that position, then redo the collision
+        let lpi = findIntersection(bv, bp, this.gameState.leftVector, this.gameState.leftPos);
+        let rpi = findIntersection(bv, bp, this.gameState.rightVector, this.gameState.leftPos);
 
         if(lpi || rpi) {
+            let bi = lpi != null ? lpi : (rpi || {} as Coord);
             timeDelta = this.bounceX(
+                this.gameState.ballPos,
                 target,
-                lpi != null ? lpi : (rpi || {} as Coord),
+                bi,
                 timeDelta);
-                if(!this.nearZero(timeDelta)) {
-                    return this.doBallCollisions(timeDelta, paddleDelta);
+                this.gameState.ballPos = bi;
+                if(!nearZero(timeDelta)) {
+                    return this.simStepHelper(timeDelta);
                 }
+        }
+
+        // will score on left this frame
+        if(bv.x > 0 && bp.x > 99-bv.x) {
+            let bi = findIntersection(bv, bp, ...this.leftMargin());
+            if(bi) {
+                this.scored = true;
+                this.gameState.rightScore += 1;
+                this.gameState.ballPos = bi;
+                this.ballScored().then();
+                return this.gameState.ballPos;
+            }
+        }
+
+        // will score on right this frame
+        if(bv.x < 0 && bp.x > 99-bv.x) {
+            let bi = findIntersection(bv, bp, ...this.rightMargin());
+            if(bi) {
+                this.scored = true;
+                this.gameState.leftScore += 1;
+                this.gameState.ballPos = bi;
+                this.ballScored().then();
+                return this.gameState.ballPos;
+            }
         }
 
         return target;
     }
 
-    private ball(
-            timeDelta: DOMHighResTimeStamp,
-            paddleDelta: Coord) {
+    private doSimulationStep(timeDelta: DOMHighResTimeStamp) {
         // we don't want it ever going too close to vertical, or too fast
         if(this.gameState.ballVector.x < 0) this.gameState.ballVector.x = clamp(-0.01, this.gameState.ballVector.x, -3);
         if(this.gameState.ballVector.x > 0) this.gameState.ballVector.x = clamp(0.01, this.gameState.ballVector.x, 3);
@@ -182,21 +171,15 @@ export class Playfield {
         if(this.gameState.ballVector.y < 0) this.gameState.ballVector.y = clamp(0, this.gameState.ballVector.y, -3);
         if(this.gameState.ballVector.y > 0) this.gameState.ballVector.y = clamp(0, this.gameState.ballVector.y, 3);
 
-        let target = {} as Coord;
-
         if(!this.scored) {
-            target = this.doBallCollisions(timeDelta, paddleDelta);
-            this.gameState.ballPos.x = target.x;
-            this.gameState.ballPos.y = target.y;
+            this.gameState.ballPos = this.simStepHelper(timeDelta);
         }
-
-        let dim = new Coord(1, 1);
-        this.context.fillRect( this.gameState.ballPos.x,  this.gameState.ballPos.y*this.yLim, dim.x, dim.y);
     }
 
     scored: boolean = false;
 
-    private async ballScored() {
+    // post-scoring pause
+    private async ballScored(): Promise<void> {
         let oldY = this.gameState.ballPos.y;
         let before = this.gameState.ballVector.normalize();
 
@@ -207,7 +190,8 @@ export class Playfield {
         });
     }
 
-    private ballResume(oldY: number, before: Coord) {
+    // once we're done with the post-scoring pause
+    private ballResume(oldY: number, before: Coord): void {
         // reset frame time calculation - we just waited 2 seconds, that'd be a BIG simulation frame
         requestAnimationFrame(() => null);
 
@@ -222,31 +206,7 @@ export class Playfield {
         }
     }
 
-    private boundsCheck(nextPos: Coord): void {
-        if(nextPos.y > 99 || nextPos.y < 0) {
-            this.gameState.ballVector = this.gameState.ballVector.multiply(new Coord(1, -1));
-
-            if(this.gameState.ballPos.y > 98) {
-                this.gameState.ballPos.y = 99 - (this.gameState.ballPos.y - 100) - 2;
-            }
-        }
-
-        if(this.gameState.ballPos.x < 0 || this.gameState.ballPos.x > 100) {
-            this.scored = true;
-
-            if(this.gameState.ballPos.x < 0) {
-                this.gameState.rightScore += 1;
-            }
-
-            if(this.gameState.ballPos.x > 100) {
-                this.gameState.leftScore += 1;
-            }
-
-            this.ballScored();
-        }
-    }
-
-    private score() {
+    private drawScore(): void {
         const digit_offset = 4;
 
         let s = '' + this.gameState.leftScore;
@@ -266,15 +226,34 @@ export class Playfield {
         }
     }
 
+    private drawBall(): void {
+        let dim = new Coord(1, 1);
+        this.context.fillRect( this.gameState.ballPos.x,  this.gameState.ballPos.y*this.yLim, dim.x, dim.y);
+    }
+
+    private drawPaddles(): void {
+        let [lpx, lpy] = this.gameState.leftPos;
+        let [rpx, rpy] = this.gameState.rightPos;
+        let [w, h] = [1, PADDLE_HEIGHT];
+
+        this.context.fillRect(lpx, lpy*this.yLim, -w, h);
+        this.context.fillRect(rpx, rpy*this.yLim, w, h);
+    }
+
     public frame(elapsed: DOMHighResTimeStamp): void {
         if(isNaN(this.lastFrame)) this.lastFrame = elapsed;
         this.context.clearRect(0, 0, 100, 100);
 
         this.stateChange(elapsed-this.lastFrame);
-        this.score();
+        this.drawScore();
 
         // draw the center court line. passing context so we don't need to put null guards everywhere
         this.midpoint_line();
         this.lastFrame = elapsed;
     }
+
+    private topMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 0)];
+    private bottomMargin = (): [Coord, Coord] => [new Coord(98, 0), new Coord(0, 100)];
+    private leftMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 0)];
+    private rightMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 100)];
 }

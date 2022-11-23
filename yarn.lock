@@ -253,6 +253,18 @@
   dependencies:
     "@types/node" "*"
 
+"@vscode/debugadapter@^1.58.0":
+  version "1.58.0"
+  resolved "https://registry.yarnpkg.com/@vscode/debugadapter/-/debugadapter-1.58.0.tgz#57075409fa4008da6a795ae046d9e7905b0e6d8e"
+  integrity sha512-FxCLNY2ViKPVVVHpZQQzkAM2XtFjCv4GH/SS0MtzX/XQbKAunNFLRWbGAtbdJ35Eq4G0LQW1tQEwOmnURX7VZw==
+  dependencies:
+    "@vscode/debugprotocol" "1.58.0"
+
+"@vscode/debugprotocol@1.58.0":
+  version "1.58.0"
+  resolved "https://registry.yarnpkg.com/@vscode/debugprotocol/-/debugprotocol-1.58.0.tgz#3416047d72103784daebab27b3834481e2960598"
+  integrity sha512-64gY3PdU7jmYDwLRJFZ5XL2BC8TK5mdhZ60XLTZn17yfbJPKCcmFDuQAkVfOPsjn7o4f6YWFy3AXSR0V9gY6jA==
+
 "@webassemblyjs/ast@1.11.1":
   version "1.11.1"
   resolved "https://registry.yarnpkg.com/@webassemblyjs/ast/-/ast-1.11.1.tgz#2bfd767eae1a6996f432ff7e8d7fc75679c0b6a7"

@@ -23,7 +23,7 @@ export class GameState {
 
         this.ballPos = new Coord(50, 0);
 
-        this.leftPos = new Coord(PADDLE_H_OFFSET, 50 - PADDLE_HEIGHT/2);
+        this.leftPos = new Coord(PADDLE_H_OFFSET+1, 50 - PADDLE_HEIGHT/2);
         this.rightPos = new Coord(99 - PADDLE_H_OFFSET, 50 - PADDLE_HEIGHT/2);
     }
 }
