@@ -12,14 +12,7 @@ export function clamp(min: number, value: number, max: number) {
 
 // https://www.codeproject.com/Tips/862988/Find-the-Intersection-Point-of-Two-Line-Segments
 // with modifications for paddle size and element width
-export function findIntersection(ballVector: Coord, p: Coord, colliderVector: Coord, q: Coord): Coord | null {
-    // find ends for crossproduct
-    var p2 = p.add(ballVector);
-
-    // we don't care if the ball collides with the outer walls outside bounds,
-    // but we do care if it floats through the paddle, so extend the collider by PADDLE_HEIGHT
-    var q2 = q.add(colliderVector)//.add(new Coord(0,PADDLE_HEIGHT));
-
+export function findIntersection(p2: Coord, p: Coord, q2: Coord, q: Coord): Coord | null {
     var qsubp = q.subtract(p);
 
     var r = p2.subtract(p);

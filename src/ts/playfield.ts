@@ -66,7 +66,7 @@ export class Playfield {
     }
 
     private simStepHelper(timeDelta: DOMHighResTimeStamp): Coord {
-        let target = this.gameState.ballPos.add(
+        let ballTarget = this.gameState.ballPos.add(
             this.gameState.ballVector.scale(
                 BASE_BALL_SPEED/1000*timeDelta));
         // TODO: lerp leftpos.y with ballpos.y with a clamped movement speed
@@ -93,7 +93,7 @@ export class Playfield {
             if(bi) {
                 timeDelta = this.bounceY(
                     this.gameState.ballPos,
-                    target, bi, timeDelta);
+                    ballTarget, bi, timeDelta);
                 this.gameState.ballPos = bi;
                 if(!nearZero(timeDelta)) {
                     return this.simStepHelper(timeDelta);
@@ -107,7 +107,7 @@ export class Playfield {
             if(bi) {
                 timeDelta = this.bounceY(
                     this.gameState.ballPos,
-                    target, bi, timeDelta);
+                    ballTarget, bi, timeDelta);
                 this.gameState.ballPos = bi;
                 if(!nearZero(timeDelta)) {
                     return this.simStepHelper(timeDelta);
@@ -116,18 +116,17 @@ export class Playfield {
         }
 
         // examine whether we collide with a paddle this frame
-        // TODO: Change this so it doesn't take the vector but the target position
         // TODO: add a check to find out if the time position of the intersection allows the paddle to intersect
         // something like find when the two possible vectors intersect, then translate the paddle to where it will be at that time
         // then create a line segment for the paddle size starting at that position, then redo the collision
-        let lpi = findIntersection(bv, bp, this.gameState.leftVector, this.gameState.leftPos);
-        let rpi = findIntersection(bv, bp, this.gameState.rightVector, this.gameState.leftPos);
+        let lpi = findIntersection(ballTarget, bp, leftTarget, this.gameState.leftPos);
+        let rpi = findIntersection(ballTarget, bp, rightTarget, this.gameState.rightPos);
 
         if(lpi || rpi) {
             let bi = lpi != null ? lpi : (rpi || {} as Coord);
             timeDelta = this.bounceX(
                 this.gameState.ballPos,
-                target,
+                ballTarget,
                 bi,
                 timeDelta);
                 this.gameState.ballPos = bi;
@@ -160,7 +159,7 @@ export class Playfield {
             }
         }
 
-        return target;
+        return ballTarget;
     }
 
     private doSimulationStep(timeDelta: DOMHighResTimeStamp) {
@@ -253,7 +252,7 @@ export class Playfield {
     }
 
     private topMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 0)];
-    private bottomMargin = (): [Coord, Coord] => [new Coord(98, 0), new Coord(0, 100)];
-    private leftMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 0)];
-    private rightMargin = (): [Coord, Coord] => [new Coord(100, 0), new Coord(0, 100)];
+    private bottomMargin = (): [Coord, Coord] => [new Coord(100, 98), new Coord(0, 98)];
+    private leftMargin = (): [Coord, Coord] => [new Coord(0, 100), new Coord(0, 0)];
+    private rightMargin = (): [Coord, Coord] => [new Coord(98, 100), new Coord(98, 0)];
 }
