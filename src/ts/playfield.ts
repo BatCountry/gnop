@@ -119,10 +119,28 @@ export class Playfield {
         // TODO: add a check to find out if the time position of the intersection allows the paddle to intersect
         // something like find when the two possible vectors intersect, then translate the paddle to where it will be at that time
         // then create a line segment for the paddle size starting at that position, then redo the collision
-        let lpi = findIntersection(ballTarget, bp, leftTarget, this.gameState.leftPos);
-        let rpi = findIntersection(ballTarget, bp, rightTarget, this.gameState.rightPos);
+        // stage one detect: will the ball path intersect with the entire area covered by paddle movements
+        let lpi = findIntersection(
+            ballTarget, bp,
+            leftTarget.add(new Coord(0, PADDLE_HEIGHT)),
+            this.gameState.leftPos);
+        let rpi = findIntersection(
+            ballTarget, bp,
+            rightTarget.add(new Coord(0, PADDLE_HEIGHT)),
+            this.gameState.rightPos);
 
         if(lpi || rpi) {
+            // TODO: move timedelta adjustment math (how far along the line) to own function
+            // use that to scale leftPos, then redo collision with leftPos, leftPos+PADDLE_HEIGHT
+            lpi = findIntersection(
+                ballTarget, bp,
+                leftTarget,
+                this.gameState.leftPos);
+            rpi = findIntersection(
+                ballTarget, bp,
+                rightTarget,
+                this.gameState.rightPos);
+
             let bi = lpi != null ? lpi : (rpi || {} as Coord);
             timeDelta = this.bounceX(
                 this.gameState.ballPos,
